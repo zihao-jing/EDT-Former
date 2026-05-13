@@ -24,7 +24,7 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 
 
 echo "=========================================="
-echo "Forward Reaction Prediction DQ-Former Training"
+echo "Forward Reaction Prediction EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "====================  ======================"

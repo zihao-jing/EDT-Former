@@ -1,5 +1,5 @@
 """
-Cache management utilities for DQ-Former datasets.
+Cache management utilities for EDT-Former datasets.
 Provides functions for cache validation, clearing, and information retrieval.
 """
 import os
@@ -257,7 +257,7 @@ def print_cache_info():
     info = get_cache_info()
     
     print("=" * 60)
-    print("DQ-Former Dataset Cache Information")
+    print("EDT-Former Dataset Cache Information")
     print("=" * 60)
     print(f"Cache directory: {info['path']}")
     print(f"Directory exists: {info['exists']}")

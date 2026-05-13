@@ -36,7 +36,7 @@ DEEPSPEED_STAGE=${1:-2}
 
 
 echo "=========================================="
-echo "Retrosynthesis DQ-Former Training"
+echo "Retrosynthesis EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "GPUs: $GPUs"

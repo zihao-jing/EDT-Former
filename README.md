@@ -81,9 +81,9 @@ The main entrypoint is `runner/pretrain.py`, launched via DeepSpeed.
 ```bash
 deepspeed --include localhost:0 \
     runner/pretrain.py -- \
-    --model_config_path    configs/stage1_dqw2d/model_config.yaml \
-    --training_config_path configs/stage1_dqw2d/training_config.yaml \
-    --data_config_path     configs/stage1_dqw2d/data_config_preprocessed.yaml
+    --model_config_path    configs/stage1/model_config.yaml \
+    --training_config_path configs/stage1/training_config.yaml \
+    --data_config_path     configs/stage1/data_config_preprocessed.yaml
 ```
 Or use the provided helper script (edit `local.env.sh` first):
 ```bash
@@ -95,9 +95,9 @@ The main entrypoint is `runner/finetuning.py`.
 ```bash
 deepspeed --include localhost:0 \
     runner/finetuning.py \
-    --model_config_path    configs/stage2_dqw2d/model_config.yaml \
-    --training_config_path configs/stage2_dqw2d/training_config.yaml \
-    --data_config_path     configs/stage2_dqw2d/data_config_preprocessed.yaml
+    --model_config_path    configs/stage2/model_config.yaml \
+    --training_config_path configs/stage2/training_config.yaml \
+    --data_config_path     configs/stage2/data_config_preprocessed.yaml
 ```
 Or:
 ```bash

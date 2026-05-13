@@ -36,7 +36,7 @@ DEEPSPEED_STAGE=${1:-2}
 
 
 echo "=========================================="
-echo "Open Question DQ-Former Training"
+echo "Open Question EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "GPUs: $GPUs"

@@ -6,6 +6,6 @@ export PYTHONPATH=${BASE_DIR}:${PYTHONPATH}
 export CUDA_VISIBLE_DEVICES=2,3
 
 python ${BASE_DIR}/evaluation/molecule_gen.py \
-  --train_config_path ${BASE_DIR}/configs/molecule_property/dq_combine/train_config.yaml \
-  --data_config_path ${BASE_DIR}/configs/molecule_property/dq_combine/data_config.yaml
+  --train_config_path ${BASE_DIR}/configs/molecule_property/edt_former_combine/train_config.yaml \
+  --data_config_path ${BASE_DIR}/configs/molecule_property/edt_former_combine/data_config.yaml
 

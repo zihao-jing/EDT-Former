@@ -129,7 +129,7 @@ size_categories:
 
 # {repo_id.split('/')[-1]}
 
-This is a preprocessed molecular dataset for DQ-Former pretraining.
+This is a preprocessed molecular dataset for EDT-Former pretraining.
 
 ## Dataset Description
 
@@ -177,7 +177,7 @@ train_dataset, val_dataset, collator = load_hf_pretrain_dataset_from_hub(
 
 ## Preprocessing
 
-This dataset was preprocessed using the DQ-Former preprocessing pipeline:
+This dataset was preprocessed using the EDT-Former preprocessing pipeline:
 
 ```bash
 python runner/datasets/preprocess_pretrain_data.py \\
@@ -188,20 +188,20 @@ python runner/datasets/preprocess_pretrain_data.py \\
 
 ## Citation
 
-If you use this dataset, please cite the DQ-Former paper:
+If you use this dataset, please cite the EDT-Former paper:
 
 ```bibtex
-@article{{dqformer2024,
-  title={{DQ-Former: Dual-Query Molecular Transformer}},
-  author={{...}},
-  journal={{...}},
-  year={{2024}}
+@inproceedings{{jing2026edtformer,
+  title={{Entropy-Guided Dynamic Tokens for Graph-LLM Alignment in Molecular Understanding}},
+  author={{Jing, Zihao and Zeng, Qiuhao and Fang, Ruiyi and Sun, Yan and Wang, Boyu and Hu, Pingzhao}},
+  booktitle={{International Conference on Learning Representations (ICLR)}},
+  year={{2026}}
 }}
 ```
 
 ## License
 
-Same as DQ-Former project.
+Same as EDT-Former project.
 """
     return card_content
 

@@ -1,5 +1,7 @@
 # Defined ignore files
 .cursor/
+.claude/
+local_env.sh
 slurm*
 envs/
 /scripts/data_analysis

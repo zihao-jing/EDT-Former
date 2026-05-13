@@ -1,7 +1,7 @@
 # Training Configuration for Molecular Property Prediction (HuggingFace TrainingArguments compatible)
 
 # Experiment naming
-run_name: mol_property_dqw2d_large
+run_name: mol_property_edt_former_large
 
 # Training hyperparameters
 num_train_epochs: 10

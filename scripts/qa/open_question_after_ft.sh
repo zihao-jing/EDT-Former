@@ -34,7 +34,7 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 
 
 echo "=========================================="
-echo "Open Question DQ-Former After Finetuning"
+echo "Open Question EDT-Former After Finetuning"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "=========================================="

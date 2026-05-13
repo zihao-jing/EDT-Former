@@ -27,7 +27,7 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 # Launch with DeepSpeed - FULL TRAINING (no test mode)
 deepspeed --master_port ${MASTER_PORT} --include localhost:${GPUs} \
     ${BASE_DIR}/runner/finetuning.py \
-    --model_config_path ${BASE_DIR}/configs/stage2_dqw2d/model_config.yaml \
-    --training_config_path ${BASE_DIR}/configs/stage2_dqw2d/training_config.yaml \
-    --data_config_path ${BASE_DIR}/configs/stage2_dqw2d/data_config_preprocessed.yaml
+    --model_config_path ${BASE_DIR}/configs/stage2/model_config.yaml \
+    --training_config_path ${BASE_DIR}/configs/stage2/training_config.yaml \
+    --data_config_path ${BASE_DIR}/configs/stage2/data_config_preprocessed.yaml
 

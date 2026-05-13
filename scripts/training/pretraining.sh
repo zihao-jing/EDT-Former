@@ -27,7 +27,7 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 # # Launch with DeepSpeed
 deepspeed --master_port ${MASTER_PORT} --include localhost:${GPUs} \
     ${BASE_DIR}/runner/pretrain.py -- \
-    --model_config_path ${BASE_DIR}/configs/stage1_dqw2d/model_config.yaml \
-    --training_config_path ${BASE_DIR}/configs/stage1_dqw2d/training_config.yaml \
-    --data_config_path ${BASE_DIR}/configs/stage1_dqw2d/data_config_preprocessed.yaml
+    --model_config_path ${BASE_DIR}/configs/stage1/model_config.yaml \
+    --training_config_path ${BASE_DIR}/configs/stage1/training_config.yaml \
+    --data_config_path ${BASE_DIR}/configs/stage1/data_config_preprocessed.yaml
 

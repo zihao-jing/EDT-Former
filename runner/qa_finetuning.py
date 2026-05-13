@@ -134,7 +134,7 @@ def main(model_args, training_args, data_config, test_mode=False, resume_from=No
             torch_dtype="float16"
         )
     else:
-        # Default DQ-Former configuration
+        # Default EDT-Former configuration
         model_config = MolLLaMAConfig(
             qformer_config={
                 "use_flash_attention": model_args.use_flash_attention,
@@ -500,15 +500,15 @@ def main(model_args, training_args, data_config, test_mode=False, resume_from=No
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MoleculeQA Finetuning with HF Transformers")
     parser.add_argument(
-        "--model_config_path", type=str, default="configs/moleculeqa/dqw2d/model_config.yaml",
+        "--model_config_path", type=str, default="configs/moleculeqa/edt_former/model_config.yaml",
         help="Path to model configuration YAML file"
     )
     parser.add_argument(
-        "--training_config_path", type=str, default="configs/moleculeqa/dqw2d/training_config.yaml",
+        "--training_config_path", type=str, default="configs/moleculeqa/edt_former/training_config.yaml",
         help="Path to training configuration YAML file (HF TrainingArguments compatible)"
     )
     parser.add_argument(
-        "--data_config_path", type=str, default="configs/moleculeqa/dqw2d/data_config.yaml",
+        "--data_config_path", type=str, default="configs/moleculeqa/edt_former/data_config.yaml",
         help="Path to data configuration YAML file"
     )
     parser.add_argument(

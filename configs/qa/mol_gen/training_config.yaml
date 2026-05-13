@@ -1,7 +1,7 @@
 # Training Configuration for Molecule Generation/Captioning (HuggingFace TrainingArguments compatible)
 
 # Experiment naming
-run_name: molgen_dqw2d
+run_name: molgen_edt_former
 
 # Training hyperparameters
 num_train_epochs: 10

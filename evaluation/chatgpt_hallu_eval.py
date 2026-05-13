@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch_geometric.data import Batch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from models.mol_llama import DQMolLLaMA
+from models.mol_llama import EDTFormer
 from models.configuration import MolLLaMAConfig
 from peft import PeftModel
 from evaluation.dataset import (
@@ -307,7 +307,7 @@ def main(args):
         torch_dtype="float16"
     )
     if args.use_dq_encoder and args.baseline_type is None:
-        model = DQMolLLaMA(
+        model = EDTFormer(
             config=config,
             vocab_size=len(tokenizer),
             torch_dtype="float16",
@@ -328,7 +328,7 @@ def main(args):
             blending_module_config={'enable_blending': True, 'num_layers': 4, 'num_heads': 8},
             torch_dtype="float16"
         )
-        model = DQMolLLaMA(
+        model = EDTFormer(
             config=config,
             vocab_size=len(tokenizer),
             torch_dtype="float16",

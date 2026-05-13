@@ -266,15 +266,15 @@ def main(model_args, training_args, data_config, test_mode=False, resume_from=No
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Finetuning (Stage 2) with HF Transformers")
     parser.add_argument(
-        "--model_config_path", type=str, default="configs/stage2_dqw2d/model_config.yaml",
+        "--model_config_path", type=str, default="configs/stage2/model_config.yaml",
         help="Path to model configuration YAML file"
     )
     parser.add_argument(
-        "--training_config_path", type=str, default="configs/stage2_dqw2d/training_config.yaml",
+        "--training_config_path", type=str, default="configs/stage2/training_config.yaml",
         help="Path to training configuration YAML file (HF TrainingArguments compatible)"
     )
     parser.add_argument(
-        "--data_config_path", type=str, default="configs/stage2_dqw2d/data_config.yaml",
+        "--data_config_path", type=str, default="configs/stage2/data_config.yaml",
         help="Path to data configuration YAML file"
     )
     parser.add_argument(

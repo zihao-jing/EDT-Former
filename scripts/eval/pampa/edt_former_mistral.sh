@@ -13,7 +13,7 @@ for prompt_type in default rationale task_info; do
         --task_name pampa \
         --qformer_path ${BASE_DIR}/checkpoints/stage2_dqw2d_mistral8b_v2_dusky/last.ckpt \
         --prompt_type ${prompt_type} \
-        --output_name dqw2d_mistral_dusky \
+        --output_name edt_former_mistral \
         --use_dq_encoder \
         --enable_blending \
         --llm_baseline

@@ -1294,7 +1294,7 @@ class BertModel(BertPreTrainedModel):
         past_key_values_length = (
             # If using mol-llama encoder.
             # past_key_values[0][0].shape[2] - self.config.query_length
-            # If using dqformer encoder.
+            # If using EDT-Former encoder.
             past_key_values[0][0].shape[2]
             if past_key_values is not None
             else 0

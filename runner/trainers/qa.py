@@ -19,7 +19,7 @@ from peft import LoraConfig, get_peft_model, TaskType
 from torch_geometric.data import Batch
 from safetensors.torch import load_file as load_safetensors
 
-from models.mol_llama import DQMolLLaMA
+from models.mol_llama import EDTFormer
 
 from nltk.translate.bleu_score import corpus_bleu
 from nltk.translate.meteor_score import meteor_score
@@ -136,7 +136,7 @@ class MoleculeQATrainer(Trainer):
             # For edt_former, this is typically None, using the default LLM from config
             if hasattr(train_config, 'llm_model_path') and train_config.llm_model_path is not None:
                 model_config.llm_config.llm_model = train_config.llm_model_path
-            model = DQMolLLaMA(
+            model = EDTFormer(
                 config=model_config,
                 vocab_size=vocab_size,
                 torch_dtype = torch_dtype,
@@ -616,7 +616,7 @@ class MoleculeGENQATrainer(Trainer):
             # For edt_former, this is typically None, using the default LLM from config
             if hasattr(train_config, 'llm_model_path') and train_config.llm_model_path is not None:
                 model_config.llm_config.llm_model = train_config.llm_model_path
-            model = DQMolLLaMA(
+            model = EDTFormer(
                 config=model_config,
                 vocab_size=vocab_size,
                 torch_dtype = torch_dtype,
@@ -1010,7 +1010,7 @@ class MoleculePropertyQATrainer(Trainer):
             # For edt_former, this is typically None, using the default LLM from config
             if hasattr(train_config, 'llm_model_path') and train_config.llm_model_path is not None:
                 model_config.llm_config.llm_model = train_config.llm_model_path
-            model = DQMolLLaMA(
+            model = EDTFormer(
                 config=model_config,
                 vocab_size=vocab_size,
                 torch_dtype = torch_dtype,
@@ -1413,7 +1413,7 @@ class MoleculeReactionTrainer(Trainer):
             # For edt_former, this is typically None, using the default LLM from config
             if hasattr(train_config, 'llm_model_path') and train_config.llm_model_path is not None:
                 model_config.llm_config.llm_model = train_config.llm_model_path
-            model = DQMolLLaMA(
+            model = EDTFormer(
                 config=model_config,
                 vocab_size=vocab_size,
                 torch_dtype = torch_dtype,
@@ -1885,7 +1885,7 @@ class MoleculeOpenQuestionTrainer(Trainer):
             # For edt_former, this is typically None, using the default LLM from config
             if hasattr(train_config, 'llm_model_path') and train_config.llm_model_path is not None:
                 model_config.llm_config.llm_model = train_config.llm_model_path
-            model = DQMolLLaMA(
+            model = EDTFormer(
                 config=model_config,
                 vocab_size=vocab_size,
                 torch_dtype = torch_dtype,

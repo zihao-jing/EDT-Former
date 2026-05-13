@@ -3,8 +3,8 @@ import torch.nn as nn
 from typing import Dict, Optional
 
 from models.mol_llama_encoder import MolLLaMAEncoder
-from models.DQ_former_encoder import DQMolLLaMAEncoder
-from models.mol_llama import DQMolLLaMA
+from models.edt_former_encoder import EDTFormerEncoder
+from models.mol_llama import EDTFormer
 
 
 class EDTPretrainModel(nn.Module):
@@ -21,8 +21,8 @@ class EDTPretrainModel(nn.Module):
         
         # Choose encoder based on configuration
         if model_config.qformer_config.use_dq_encoder:
-            print("Using DQMolLLaMAEncoder")
-            self.encoder = DQMolLLaMAEncoder(
+            print("Using EDTFormerEncoder")
+            self.encoder = EDTFormerEncoder(
                 graph_encoder_config=model_config.graph_encoder_config,
                 blending_module_config=model_config.blending_module_config,
                 qformer_config=model_config.qformer_config,
@@ -85,8 +85,8 @@ class EDTFinetuneModel(nn.Module):
         # Read enable_blending from the config that was already set
         enable_blending = getattr(model_config.blending_module_config, 'enable_blending', False)
         
-        print(f"Using DQMolLLaMA, enable_blending: {enable_blending}")
-        self.model = DQMolLLaMA(
+        print(f"Using EDTFormer, enable_blending: {enable_blending}")
+        self.model = EDTFormer(
             config=model_config,
             vocab_size=vocab_size,
             torch_dtype=torch_dtype,

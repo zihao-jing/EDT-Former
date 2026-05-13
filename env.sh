@@ -14,5 +14,5 @@ conda activate your-conda-env
 # export OPENAI_API_KEY=your-openai-api-key
 # export PATH="/path/to/your/conda/env/bin:$PATH"
 
-# rclone sync gl:/FS/DQ-Former/checkpoints/ ./checkpoints/ --progress
-# rclone sync gl:/FS/DQ-Former/data/ ./data/ --progress
+# rclone sync gl:/FS/EDT-Former/checkpoints/ ./checkpoints/ --progress
+# rclone sync gl:/FS/EDT-Former/data/ ./data/ --progress

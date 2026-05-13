@@ -1,5 +1,5 @@
 """
-Preprocessing scripts module for DQ-Former.
+Preprocessing scripts module for EDT-Former.
 
 This module provides tools for:
 1. Preprocessing molecular and instruction data into JSONL format

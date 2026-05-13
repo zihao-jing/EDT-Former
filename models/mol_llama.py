@@ -11,7 +11,7 @@ from torch.cuda.amp import autocast as autocast
 from peft import get_peft_model, LoraConfig, TaskType
 
 from models.configuration import MolLLaMAConfig
-from models.DQ_former_encoder import DQMolLLaMAEncoder
+from models.edt_former_encoder import EDTFormerEncoder
 from models.mol_llama_encoder import MolLLaMAEncoder
 from transformers import AutoTokenizer, AutoModelForCausalLM, PreTrainedModel, GenerationMixin, BitsAndBytesConfig, LlamaForCausalLM
 
@@ -42,20 +42,20 @@ def disabled_train(self, mode=True):
 def unlock_new_token_embeddings(embedding_layer, new_token_ids, init="mean"):
     """
     Unfreeze the rows in embedding_layer corresponding to new_token_ids,
-    并可选初始化这些 token 的 embedding 向量。
+    and optionally initialize the embedding vectors for those tokens.
 
     Args:
         embedding_layer (nn.Embedding): from self.llm.get_input_embeddings()
-        new_token_ids (List[int]): 新增 token 的 ID 列表
-        init (str or None): 初始化策略。可选：
+        new_token_ids (List[int]): List of new token IDs to unfreeze
+        init (str or None): Initialization strategy. Options:
             - "mean": initialize with the mean of the original vocabulary
             - "zero": initialize to 0 vector
             - None: do not initialize (keep default random)
     """
-    # 1. 全部冻结
+    # 1. Freeze all embeddings
     embedding_layer.weight.requires_grad = False
 
-    # 2. 有需要的话初始化新增行
+    # 2. Optionally initialize the new rows
     with torch.no_grad():
         if init == "mean":
             old_vocab_size = embedding_layer.weight.shape[0] - len(new_token_ids)
@@ -66,11 +66,11 @@ def unlock_new_token_embeddings(embedding_layer, new_token_ids, init="mean"):
             for idx in new_token_ids:
                 embedding_layer.weight[idx].zero_()
 
-    # 3. 单独解冻这些行
+    # 3. Unfreeze only the new rows
     for idx in new_token_ids:
         embedding_layer.weight[idx].requires_grad = True
 
-    logger.info(f"✅ Unfrozen {len(new_token_ids)} tokens: {new_token_ids}")
+    logger.info(f"Unfrozen {len(new_token_ids)} tokens: {new_token_ids}")
 
 
 class MolLLaMAPreTrainedModel(PreTrainedModel):
@@ -83,7 +83,7 @@ class MolLLaMAPreTrainedModel(PreTrainedModel):
         r"llm."
     ]
 
-class DQMolLLaMA(MolLLaMAPreTrainedModel):
+class EDTFormer(MolLLaMAPreTrainedModel):
     def __init__(
         self,
         config: MolLLaMAConfig,
@@ -111,7 +111,7 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
             if enable_blending:
                 config.graph_encoder_config.encoder_types = ['unimol', 'moleculestm']
             self.num_query_tokens = config.qformer_config.num_query_tokens
-            self.encoder = DQMolLLaMAEncoder(
+            self.encoder = EDTFormerEncoder(
                 graph_encoder_config = config.graph_encoder_config,
                 blending_module_config = config.blending_module_config,
                 qformer_config = config.qformer_config,
@@ -193,23 +193,19 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
         # -------------------------- frozen llm ----------------------------------
 
         else:
-        # 1. 加载基座模型
             logger.info(f"Loading LLM model: {config.llm_config.llm_model}")
             self.llm = LlamaForCausalLM.from_pretrained(
                 config.llm_config.llm_model,
-                # quantization_config=bnb_config,
                 torch_dtype=torch_dtype,
                 attn_implementation="flash_attention_2" if enable_flash else None,
-                # device_map="auto",
             )
 
-            # 2. 如果你自己扩充过词表，仍然可以保留这一行
             self.llm.resize_token_embeddings(vocab_size)
 
-            # 3. 冻结 & eval
-            self.llm.eval()                # 关闭 dropout / LayerNorm 统计更新
-            for p in self.llm.parameters():  
-                p.requires_grad = False    # 明确告诉框架"别把梯度算进去"
+            # Freeze LLM parameters
+            self.llm.eval()
+            for p in self.llm.parameters():
+                p.requires_grad = False
 
             if add_ids is not None:
                 embed = self.llm.get_input_embeddings()
@@ -403,10 +399,10 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
         query_output: torch.Tensor,          # [B, Q_total, D]
         text_embeds: torch.Tensor,           # [B, L, D]
         mol_token_flag: torch.Tensor,        # [B, L]  bool
-        attention_mask: torch.Tensor,        # [B, L]  0/1, 左 padding
-        labels: torch.Tensor,                # [B, L]  int  (可含 -100)
+        attention_mask: torch.Tensor,        # [B, L]  0/1, left padding
+        labels: torch.Tensor,                # [B, L]  int  (may contain -100)
         max_pos: int,                        # llm.config.max_position_embeddings
-        local_q_only: bool = False,          # 是否只使用 local Q
+        local_q_only: bool = False,          # whether to use only local Q tokens
         inner_cluster: torch.Tensor = None,  # For multi-molecule support
         inner_cluster_batch: torch.Tensor = None,  # For multi-molecule support
         num_global_tokens: int = None,       # For multi-molecule support
@@ -438,38 +434,38 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
         for i in range(B):
             flag_i = mol_token_flag[i].nonzero(as_tuple=False).squeeze()  # True 位置
             q_i    = query_output[i]                                     # [Q_total, D]
-            n_true = flag_i.numel()                                      # 全局 Q 数
-            n_q    = q_i.size(0)                                         # 全部 Q 数
-            pad_left = (attention_mask[i] == 0).sum().item()             # 原左侧 0 数
+            n_true = flag_i.numel()                                      # number of global Q tokens
+            n_q    = q_i.size(0)                                         # total Q tokens
+            pad_left = (attention_mask[i] == 0).sum().item()             # left padding count
 
-            assert n_q >= n_true, f"第 {i} 个样本 Q 数 {n_q} < True 数 {n_true}"
+            assert n_q >= n_true, f"Sample {i}: Q count {n_q} < True count {n_true}"
 
-            # --- 1. 写入全局 Q（覆盖） ---
+            # --- 1. Write global Q tokens (replace <mol> positions) ---
             x = text_embeds[i]
             if labels is not None:
                 l = labels[i]
-                if not local_q_only:                                      # view
+                if not local_q_only:
                     x[flag_i] = q_i[:n_true]
                 l[flag_i] = ignore_index
             else:
                 if not local_q_only:
                     x[flag_i] = q_i[:n_true]
 
-            # --- 2. 插入 local Q（在最后一个 True 右侧） ---
-            local_q = q_i[n_true:]                                       # 可能为空
+            # --- 2. Insert local Q tokens (after the last <mol> position) ---
+            local_q = q_i[n_true:]                                       # may be empty
             if local_q.numel():
                 insert_pos = flag_i[-1].item() + 1
                 x = torch.cat([x[:insert_pos], local_q, x[insert_pos:]], dim=0)
                 if labels is not None:
                     local_lbl = torch.full((local_q.size(0),), ignore_index, dtype=l.dtype, device=l.device)
                     l = torch.cat([l[:insert_pos], local_lbl, l[insert_pos:]], dim=0)
-            # --- 3. 生成对应 attention mask ---
+            # --- 3. Generate corresponding attention mask ---
             cur_len = x.size(0)
             ones_len = cur_len - pad_left
             cur_mask = torch.cat([
                 torch.zeros(pad_left, dtype=torch.long, device=x.device),
                 torch.ones(ones_len, dtype=torch.long, device=x.device)
-            ], dim=0)                                                    # [cur_len]
+            ], dim=0)
 
             embeds_list.append(x)
             mask_list.append(cur_mask)
@@ -479,7 +475,7 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
                 label_list.append(None)
             new_lengths.append(cur_len)
 
-        # --- 4. pad / 截断到批内最大 & max_pos ---
+        # --- 4. Pad / truncate to batch max length and max_pos ---
         max_len = min(max(new_lengths), max_pos)
         padded_embeds, padded_mask, padded_labels = [], [], []
 
@@ -487,9 +483,9 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
             emb = emb[:max_len]
             m   = m[:max_len]
             if labels is not None:
-                l   = l[:max_len]            # 同样截断 label
+                l   = l[:max_len]
 
-            if emb.size(0) < max_len:        # 右侧 pad
+            if emb.size(0) < max_len:        # Right-pad
                 pad_len = max_len - emb.size(0)
                 emb_pad = torch.zeros(pad_len, D, dtype=emb.dtype, device=emb.device)
                 m_pad   = torch.zeros(pad_len,     dtype=m.dtype,   device=m.device)
@@ -509,10 +505,10 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
                 padded_labels.append(None)
 
 
-        text_embeds = torch.stack(padded_embeds, dim=0)     # [B, max_len, D]
-        attention_mask = torch.stack(padded_mask, dim=0)    # [B, max_len]
+        text_embeds = torch.stack(padded_embeds, dim=0)
+        attention_mask = torch.stack(padded_mask, dim=0)
         if labels is not None:
-            labels = torch.stack(padded_labels, dim=0)          # [B, max_len]
+            labels = torch.stack(padded_labels, dim=0)
 
         return text_embeds, attention_mask, labels, max_len
 
@@ -645,15 +641,15 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
             )
             return outputs
         
-        # 1. 图→Query
+        # 1. Graph -> Query
         # brics_gids and entropy_gids are already in graph_batch, no need to pass separately
         _, _, query_output = self.encoder(graph_batch)
         query_output = self.llm_proj(query_output.last_hidden_state)  # [B,Q,D]
 
-        # 2. 原文本 embedding
+        # 2. Text embeddings
         inputs_embeds = self.llm.get_input_embeddings()(text_batch.input_ids)
 
-        # 3. 复用 inject_queries，labels 可以传 None 或 text_batch.labels
+        # 3. Inject queries into text embeddings
         if hasattr(text_batch, 'labels'):
             labels = text_batch.labels
         else:
@@ -670,7 +666,7 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
             text_embeds=inputs_embeds,
             mol_token_flag=text_batch.mol_token_flag,
             attention_mask=text_batch.attention_mask,
-            labels=labels,               # 或 None，取决于你函数实现
+            labels=labels,
             max_pos=self.llm.config.max_position_embeddings,
             local_q_only=self.local_q_only,
             inner_cluster=inner_cluster,
@@ -678,7 +674,7 @@ class DQMolLLaMA(MolLLaMAPreTrainedModel):
             num_global_tokens=num_global_tokens,
         )
 
-        # 4. 直接调 generate
+        # 4. Generate
         outputs = self.llm.generate(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
@@ -1065,29 +1061,24 @@ def get_mol_graphs(smiles_list, dictionary, device):
 
 def build_local_q_assignment(entropy_gids, inner_cluster, inner_cluster_batch):
     """
-    根据 entropy_gids / inner_cluster / inner_cluster_batch 计算：
-    - 每个样本的 local_q 在全局 local_q 里的起止位置（slice）
-    - 每个样本内部：每个 local_q(=patch) 属于哪个 inner_cluster（段/分子）
+    Compute local_q start offsets and cluster assignments based on entropy_gids.
 
     Args:
         entropy_gids: list of list, len = B
-            entropy_gids[b]: 长度 N_b，原子维度的 patch id（0..P_b-1）
+            entropy_gids[b]: atom-level patch IDs of length N_b (0..P_b-1)
         inner_cluster: LongTensor [N_total_atoms]
-            每个原子的 inner_cluster id（在各自样本内从 0 开始）
+            inner_cluster ID for each atom (0-indexed within each sample)
         inner_cluster_batch: LongTensor [N_total_atoms]
-            每个原子属于 batch 中哪一个样本（0..B-1）
+            batch index for each atom (0..B-1)
 
     Returns:
         local_q_starts: list[int], len = B
-            local_q_starts[b] = 这个样本在 global local_q 里的起始偏移
-            第 b 个样本的 local_q index 范围为 [local_q_starts[b], local_q_starts[b] + num_patches_b)
+            Starting offset of each sample's local_q in the global local_q tensor.
+            Sample b's local_q indices span [local_q_starts[b], local_q_starts[b] + num_patches_b).
 
         local_q_cluster: list[LongTensor], len = B
             local_q_cluster[b]: shape [num_patches_b]
-            第 k 个 local_q（样本内 index=k）对应的 inner_cluster id
-            对于全局 index:
-                global_idx = local_q_starts[b] + k
-                对应的段 = local_q_cluster[b][k]
+            The inner_cluster ID for each local_q (patch) in sample b.
     """
     import torch
 
@@ -1098,49 +1089,46 @@ def build_local_q_assignment(entropy_gids, inner_cluster, inner_cluster_batch):
     local_q_starts = []
     local_q_cluster = []
 
-    offset = 0  # 全局 local_q 的偏移
+    offset = 0  # global local_q offset
 
-    # 把 inner_cluster 和 batch 展开方便按样本切片
     inner_cluster = inner_cluster.to(device)
     inner_cluster_batch = inner_cluster_batch.to(device)
 
     for b in range(B):
-        gids_b = entropy_gids[b]  # list[int], len N_b（原子数）
+        gids_b = entropy_gids[b]  # list[int], len N_b (number of atoms)
         if len(gids_b) == 0:
-            # 这个样本没有原子 / 没有 local patch
+            # No atoms / no local patches for this sample
             local_q_starts.append(offset)
             local_q_cluster.append(torch.empty(0, dtype=dtype, device=device))
             continue
 
         gids_b_tensor = torch.tensor(gids_b, device=device, dtype=torch.long)
 
-        # 当前样本对应的原子在 inner_cluster 里的切片
+        # Slice out atoms for this sample from inner_cluster
         atom_mask_b = (inner_cluster_batch == b)
         clusters_b = inner_cluster[atom_mask_b]  # [N_b]
         assert clusters_b.numel() == gids_b_tensor.numel(), \
-            f"Batch {b}: entropy_gids 长度 {gids_b_tensor.numel()} 与 inner_cluster_batch 中该样本原子数 {clusters_b.numel()} 不一致"
+            f"Batch {b}: entropy_gids length {gids_b_tensor.numel()} != atom count in inner_cluster_batch {clusters_b.numel()}"
 
-        # 这个样本有多少个 patch（local_q 数量）
-        # 一般 gids 是 0..P_b-1 连续，这里用 unique 保险一点
+        # Number of patches for this sample (use unique for safety)
         patch_ids = torch.unique(gids_b_tensor).tolist()
         patch_ids = sorted(patch_ids)
         num_patches_b = len(patch_ids)
 
         local_q_starts.append(offset)
 
-        # 每个 patch -> 一个 inner_cluster（哪一段 / 哪个分子）
+        # Map each patch -> one inner_cluster (one segment / molecule)
         cluster_per_patch = []
 
         for p in patch_ids:
-            mask_p = (gids_b_tensor == p)       # 这个 patch 下的原子
-            patch_clusters = clusters_b[mask_p] # 它们对应的 inner_cluster id
+            mask_p = (gids_b_tensor == p)       # atoms belonging to this patch
+            patch_clusters = clusters_b[mask_p] # their inner_cluster IDs
 
-            # 理论上一个 patch 只属于一个 inner_cluster（单个分子的一段）
+            # Each patch should belong to exactly one inner_cluster
             uniq = torch.unique(patch_clusters)
             if uniq.numel() != 1:
-                # 如果跨段了，说明数据有点问题，这里给个 assert / 或者可以改成 majority vote
                 raise ValueError(
-                    f"Batch {b}, patch {p} 跨越了多个 inner_cluster: {uniq.tolist()}"
+                    f"Batch {b}, patch {p} spans multiple inner_clusters: {uniq.tolist()}"
                 )
 
             cluster_per_patch.append(uniq.item())
@@ -1149,7 +1137,7 @@ def build_local_q_assignment(entropy_gids, inner_cluster, inner_cluster_batch):
             torch.tensor(cluster_per_patch, dtype=dtype, device=device)
         )
 
-        # 下一个样本的 local_q 起点：累加 patch 数
+        # Advance the global offset by this sample's patch count
         offset += num_patches_b
 
     return local_q_starts, local_q_cluster

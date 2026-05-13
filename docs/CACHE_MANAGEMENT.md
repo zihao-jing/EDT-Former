@@ -1,10 +1,10 @@
-# Cache Management in DQ-Former
+# Cache Management in EDT-Former
 
-This document explains how cache management works in DQ-Former and how to prevent cache-related issues.
+This document explains how cache management works in EDT-Former and how to prevent cache-related issues.
 
 ## Overview
 
-DQ-Former caches processed molecule datasets to speed up training. The cache system uses:
+EDT-Former caches processed molecule datasets to speed up training. The cache system uses:
 - **Unique keys** based on data directory path and encoder types
 - **Automatic validation** by comparing file modification times
 - **Intelligent invalidation** when source files are updated
@@ -217,7 +217,7 @@ bash scripts/clear_cache.sh clear --force
 ## File Structure
 
 ```
-DQ-Former/
+EDT-Former/
 ├── data/
 │   └── .cache/                    # Cache directory
 │       └── mol_dataset_*.pkl      # Cached datasets

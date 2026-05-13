@@ -11,10 +11,9 @@ for prompt_type in default rationale task_info; do
         --pretrained_model_name_or_path unsloth/Llama-3.1-8B-Instruct \
         --tokenizer_path DongkiKim/Mol-Llama-3.1-8B-Instruct \
         --data_dir ${DATA_DIR} \
-        --task_name pampa \
-        --qformer_path ${BASE_DIR}/checkpoints/stage2_dqw2d/epoch=01.ckpt \
+        --task_name bbbp \
+        --qformer_path ${BASE_DIR}/checkpoints/stage2_dqformer_combine/epoch=01.ckpt \
         --prompt_type ${prompt_type} \
-        --output_name dqw2d \
-        --use_dq_encoder \
-        --enable_blending
+        --output_name edt_combine \
+        --use_dq_encoder
 done

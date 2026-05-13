@@ -35,7 +35,7 @@ if [[ "$*" == *"--clear-cache"* ]]; then
 fi
 
 echo "=========================================="
-echo "Molecule Generation DQ-Former Training"
+echo "Molecule Generation EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "GPUs: $GPUs"

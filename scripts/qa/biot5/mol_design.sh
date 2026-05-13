@@ -34,7 +34,7 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 
 
 echo "=========================================="
-echo "Description-Guided Molecule Design DQ-Former Training"
+echo "Description-Guided Molecule Design EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "=========================================="

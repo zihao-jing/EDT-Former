@@ -21,7 +21,7 @@ from utils.unicore import Dictionary
 from models.unimol.unimol import SimpleUniMolModel
 from models.moleculestm.moleculestm import MoleculeSTM
 from models.blending_module.blending_module import BlendingModule
-from models.qformer.dq_modeling_bert import BertConfig, BertLMHeadModel
+from models.qformer.edt_modeling_bert import BertConfig, BertLMHeadModel
 
 
 from utils.dist_funs import pl_concat_all_gather
@@ -33,7 +33,7 @@ def disabled_train(self, mode=True):
     return self
 
 
-class DQMolLLaMAEncoder(nn.Module):
+class EDTFormerEncoder(nn.Module):
     def __init__(
         self,
         graph_encoder_config,
@@ -59,11 +59,6 @@ class DQMolLLaMAEncoder(nn.Module):
 
         self.global_q_budget = global_q_budget
         self.local_q_budget = local_q_budget
-        print("Activated global and local q budget==================================================")
-        print(f"global_q_budget: {self.global_q_budget}, local_q_budget: {self.local_q_budget}")
-        print("==================================================")
-
-        print(f"local_q_only: {self.local_q_only}")
 
         # Initialize graph encoders
         self.graph_encoder, self.ln_graph = {}, {}
@@ -92,7 +87,7 @@ class DQMolLLaMAEncoder(nn.Module):
 
         # Initialize Qformer
         self.Qformer, self.query_tokens, self.scibert_tokenizer = \
-                    self.init_DQformer(qformer_config, hidden_size)
+                    self.init_qformer(qformer_config, hidden_size)
         
         if self.use_dq_encoder:
             self.local_q_proj = nn.Linear(hidden_size, self.Qformer.config.hidden_size)
@@ -103,13 +98,6 @@ class DQMolLLaMAEncoder(nn.Module):
         # Initialize Projectors, Not be used for stage2 training
         self.graph_proj, self.text_proj, self.gtm_head = \
                     self.init_projectors(self.Qformer.config.hidden_size, qformer_config.embed_dim)
-
-        # Add projection layer for dimension mismatch when blending is disabled
-        if not enable_blending:
-            # MoleculeSTM outputs 300 dims, Qformer expects 512 dims
-            self.dim_projection = None
-        else:
-            self.dim_projection = None
 
         self.temperature = temperature
 
@@ -168,7 +156,7 @@ class DQMolLLaMAEncoder(nn.Module):
 
         return moleculestm_model, ln_graph
 
-    def init_DQformer(self, qformer_config, hidden_size):
+    def init_qformer(self, qformer_config, hidden_size):
         bert_name = qformer_config.bert_name
         num_query_tokens = qformer_config.num_query_tokens
         cross_attention_freq = qformer_config.cross_attention_freq
@@ -198,10 +186,10 @@ class DQMolLLaMAEncoder(nn.Module):
 
         # Optionally wrap Q-Former with PEFT LoRA (use existing packages only)
 
-        # ✅（2）扩展位置表 embedding（若预训练只有 512）
+        # Extend position embeddings if pre-trained with fewer positions (e.g. 512)
         old_embed = Qformer.bert.embeddings.position_embeddings
         new_embed = nn.Embedding(encoder_config.max_position_embeddings, old_embed.embedding_dim)
-        new_embed.weight.data[: old_embed.num_embeddings] = old_embed.weight.data  # 复制已有部分
+        new_embed.weight.data[: old_embed.num_embeddings] = old_embed.weight.data
         Qformer.bert.embeddings.position_embeddings = new_embed
 
         state_dict = Qformer.state_dict()
@@ -216,39 +204,6 @@ class DQMolLLaMAEncoder(nn.Module):
         query_tokens.data.normal_(mean=0.0, std=encoder_config.initializer_range)
         return Qformer, query_tokens, tokenizer
 
-
-    def init_Qformer(self, qformer_config, hidden_size):
-        bert_name = qformer_config.bert_name
-        num_query_tokens = qformer_config.num_query_tokens
-        cross_attention_freq = qformer_config.cross_attention_freq
-
-        tokenizer = BertTokenizer.from_pretrained(bert_name)
-        tokenizer.add_special_tokens({"bos_token": "[DEC]"})
-
-        encoder_config = BertConfig.from_pretrained(bert_name)
-        encoder_config.encoder_width = hidden_size
-        
-        # insert cross-attention layer every other block
-        encoder_config.add_cross_attention = True
-        encoder_config.cross_attention_freq = cross_attention_freq
-        encoder_config.query_length = num_query_tokens
-
-        Qformer = BertLMHeadModel.from_pretrained(
-            bert_name, config=encoder_config
-        )
-
-        Qformer.resize_token_embeddings(len(tokenizer))
-        state_dict = Qformer.state_dict()
-        for name, param in Qformer.named_parameters():
-            if "_query" in name:
-                key_orig = name.replace("_query", "")
-                param.data.copy_(state_dict[key_orig])
-
-        query_tokens = nn.Parameter(
-            torch.zeros(1, num_query_tokens, encoder_config.hidden_size)
-        )
-        query_tokens.data.normal_(mean=0.0, std=encoder_config.initializer_range)
-        return Qformer, query_tokens, tokenizer
 
     def init_projectors(self, qformer_hidden_size, embed_dim):
         graph_proj = nn.Linear(qformer_hidden_size, embed_dim)
@@ -450,8 +405,7 @@ class DQMolLLaMAEncoder(nn.Module):
 
         # ------------------------------------------------------------
 
-        # ---------- (A) 构造动态 Local-Q ----------
-        # 将每个样本的节点嵌入投射为 Local-Q，长度 = 节点数
+        # (A) Build dynamic Local-Q from fragment embeddings
         if self.use_dq_encoder:
             local_q = self.local_q_proj(pooled_frags)           # [B, N, D]
             local_q_mask = frag_mask                         # [B, N]  True=keep / 1
@@ -466,7 +420,7 @@ class DQMolLLaMAEncoder(nn.Module):
             local_q = None
             local_q_mask = None
 
-        # ---------- (B) 取静态 Global-Q ----------
+        # (B) Get static Global-Q tokens
         static_q = self.query_tokens.expand(B, -1, -1)    # [B, Q_fixed, D]
         static_q_mask = self.static_q_mask.expand(B, -1)  # [B, Q_fixed]
         
@@ -477,7 +431,7 @@ class DQMolLLaMAEncoder(nn.Module):
                 # Mask tokens from right to left, keeping leftmost tokens active
                 static_q_mask[:, self.global_q_budget:] = False
 
-        # ---------- (C) 合并两类 Query ----------
+        # (C) Concatenate global and local queries
         if self.local_q_only:
             query_embeds = local_q
             query_mask = local_q_mask
@@ -503,12 +457,12 @@ class DQMolLLaMAEncoder(nn.Module):
             query_embeds = torch.cat([query_embeds, emb_pad], dim=1)
             query_mask = torch.cat([query_mask, mask_pad], dim=1)
 
-        # ---------- (D) 喂入 Q-Former ----------
+        # (D) Feed combined queries into Q-Former
         query_output = self.Qformer.bert(
-            query_embeds=query_embeds,                   # <-- 变长 Query
-            attention_mask=query_mask,                   # Q-Former 的自注意 mask
-            encoder_hidden_states=batch_node,            # UniMol 节点 → Key/Value
-            encoder_attention_mask=batch_mask,           # 节点有效位
+            query_embeds=query_embeds,
+            attention_mask=query_mask,
+            encoder_hidden_states=batch_node,
+            encoder_attention_mask=batch_mask,
             use_cache=True,
             return_dict=True,
         )
@@ -647,25 +601,6 @@ class DQMolLLaMAEncoder(nn.Module):
         return loss_gtm
 
 
-    def molecule_captioning_backup(self, text_batch, query_output, batch_size):
-        decoder_input_ids = text_batch.input_ids.clone()
-        decoder_input_ids[:, 0] = self.scibert_tokenizer.bos_token_id
-        labels = decoder_input_ids.masked_fill(
-            decoder_input_ids == self.scibert_tokenizer.pad_token_id, -100
-        )
-        query_atts = torch.ones((batch_size, self.num_query_tokens), dtype=torch.long, device=self.device)
-        
-        attention_mask = torch.cat([query_atts, text_batch.attention_mask], dim=1)
-        lm_output = self.Qformer(
-            decoder_input_ids,
-            attention_mask=attention_mask,
-            past_key_values=query_output.past_key_values,
-            return_dict=True,
-            labels=labels,
-        )
-
-        loss_lm = lm_output.loss
-
     def molecule_captioning(self, text_batch, query_output, batch_size):
         decoder_input_ids = text_batch.input_ids.clone()
         decoder_input_ids[:, 0] = self.scibert_tokenizer.bos_token_id
@@ -686,6 +621,3 @@ class DQMolLLaMAEncoder(nn.Module):
             labels=labels,
         )
         return lm_output.loss
-
-
-        return loss_lm

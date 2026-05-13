@@ -35,7 +35,7 @@ if [[ "$*" == *"--clear-cache"* ]]; then
 fi
 
 echo "=========================================="
-echo "Property Prediction DQ-Former Training"
+echo "Property Prediction EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "GPUs: $GPUs"

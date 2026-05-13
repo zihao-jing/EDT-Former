@@ -36,7 +36,7 @@ DEEPSPEED_STAGE=${1:-2}
 
 
 echo "=========================================="
-echo "MoleculeQA DQ-Former Training"
+echo "MoleculeQA EDT-Former Training"
 echo "=========================================="
 echo "BASE_DIR: $BASE_DIR"
 echo "GPUs: $GPUs"

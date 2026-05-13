@@ -2,7 +2,7 @@
 # These parameters define the model architecture
 
 # Pretrained checkpoint path (Stage 2 checkpoint for property prediction training)
-model_name_or_path: checkpoints/stage2_dqw2d/final_model  # Automatically loads Stage 2 full model checkpoint
+model_name_or_path: checkpoints/edt_former_s2_large/final_model  # Stage 2 full model checkpoint
 
 # QFormer Configuration
 use_flash_attention: True

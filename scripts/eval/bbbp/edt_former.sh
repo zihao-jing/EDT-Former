@@ -14,7 +14,7 @@ for prompt_type in default rationale task_info; do
         --task_name bbbp \
         --qformer_path ${BASE_DIR}/checkpoints/stage2_dqw2d/epoch=01.ckpt \
         --prompt_type ${prompt_type} \
-        --output_name dqw2d \
+        --output_name edt_former \
         --use_dq_encoder \
         --enable_blending
 done

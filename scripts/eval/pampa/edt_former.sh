@@ -7,13 +7,14 @@ export CUDA_VISIBLE_DEVICES=0
 
 for prompt_type in default rationale task_info; do
 
-    python ${BASE_DIR}/zeroshot/inference.py \
+    python ${BASE_DIR}/evaluation/inference.py \
         --pretrained_model_name_or_path unsloth/Llama-3.1-8B-Instruct \
         --tokenizer_path DongkiKim/Mol-Llama-3.1-8B-Instruct \
         --data_dir ${DATA_DIR} \
-        --task_name bbbp \
-        --qformer_path ${BASE_DIR}/checkpoints/stage2_dqformer_entropy/epoch=01.ckpt \
+        --task_name pampa \
+        --qformer_path ${BASE_DIR}/checkpoints/stage2_dqw2d/epoch=01.ckpt \
         --prompt_type ${prompt_type} \
-        --output_name dq_entropy \
-        --use_dq_encoder
+        --output_name edt_former \
+        --use_dq_encoder \
+        --enable_blending
 done

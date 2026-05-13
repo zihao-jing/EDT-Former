@@ -209,7 +209,7 @@ class ModelArguments:
     # Baseline model support
     baseline_type: Optional[str] = field(
         default=None,
-        metadata={"help": "Baseline model type: 'mollama' (Mol-LLaMA baseline), 'llm_lora' (LLM with LoRA), 'llm_only' (LLM only), or None (default DQ-Former)."}
+        metadata={"help": "Baseline model type: 'mollama' (Mol-LLaMA baseline), 'llm_lora' (LLM with LoRA), 'llm_only' (LLM only), or None (default EDT-Former)."}
     )
     lora_path: Optional[str] = field(
         default=None,

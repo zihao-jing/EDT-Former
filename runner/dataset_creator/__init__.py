@@ -1,5 +1,5 @@
 """
-Preprocessed datasets module for DQ-Former.
+Preprocessed datasets module for EDT-Former.
 
 This module provides tools for:
 1. Preprocessing molecular data into JSONL format

@@ -1,7 +1,7 @@
 # Training Configuration for Stage 2 / Finetuning (HuggingFace TrainingArguments compatible)
 
 # Experiment naming
-run_name: stage2_dqw2d_test
+run_name: stage2_edt_former_test
 
 # Training hyperparameters
 num_train_epochs: 2
