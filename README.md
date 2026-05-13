@@ -2,6 +2,10 @@
 
 [![ICLR 2026](https://img.shields.io/badge/ICLR-2026-blue.svg)](https://openreview.net/forum?id=yzwSzhqLpH&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DICLR.cc%2F2026%2FConference%2FAuthors%23your-submissions))
 [![Paper](https://img.shields.io/badge/Paper-PDF-red.svg)](https://www.arxiv.org/abs/2602.02742)
+[![Pretrain Data](https://img.shields.io/badge/🤗%20Dataset-Pretrain-yellow.svg)](https://huggingface.co/datasets/zihaojing/DQFormer-pretrain-data)
+[![SFT Data](https://img.shields.io/badge/🤗%20Dataset-SFT-yellow.svg)](https://huggingface.co/datasets/zihaojing/DQFormer-sft-data)
+[![Encoder](https://img.shields.io/badge/🤗%20Model-Encoder-green.svg)](https://huggingface.co/zihaojing/DQFormer-encoder)
+[![Full Model](https://img.shields.io/badge/🤗%20Model-Full-green.svg)](https://huggingface.co/zihaojing/DQFormer-model)
 
 > **Accepted at ICLR 2026**
 >
@@ -39,8 +43,37 @@ cp env.sh local.env.sh
 source local.env.sh
 ```
 
+### Models and Datasets
+
+Pre-trained models and datasets are available on HuggingFace:
+
+| Resource | HuggingFace Link | Description |
+|----------|-----------------|-------------|
+| Pretrain Data | [zihaojing/DQFormer-pretrain-data](https://huggingface.co/datasets/zihaojing/DQFormer-pretrain-data) | Stage 1 encoder pretraining corpus (~12 GB, from PubChem) |
+| SFT Data | [zihaojing/DQFormer-sft-data](https://huggingface.co/datasets/zihaojing/DQFormer-sft-data) | Stage 2 instruction-tuning corpus (~12 GB, from Mol-LLaMA-Instruct) |
+| Encoder | [zihaojing/DQFormer-encoder](https://huggingface.co/zihaojing/DQFormer-encoder) | Stage 1 DQ-Former encoder checkpoint (~699 MB) |
+| Full Model | [zihaojing/DQFormer-model](https://huggingface.co/zihaojing/DQFormer-model) | Stage 2 full EDT-Former model (encoder + Llama-3.1-8B-Instruct, ~16 GB) |
+
+**Quick download:**
+```python
+from huggingface_hub import snapshot_download
+
+# Download pretrained encoder (Stage 1)
+snapshot_download("zihaojing/DQFormer-encoder", local_dir="checkpoints/edt_former_s1_large/final_model")
+
+# Download full model (Stage 2)
+snapshot_download("zihaojing/DQFormer-model", local_dir="checkpoints/edt_former_s2_large/final_model")
+
+# Download pretraining data
+snapshot_download("zihaojing/DQFormer-pretrain-data", repo_type="dataset", local_dir="data/pretrain")
+
+# Download SFT data
+snapshot_download("zihaojing/DQFormer-sft-data", repo_type="dataset", local_dir="data/finetune")
+```
+
 ### Data
-- Place datasets under `data/` (see `configs/*/data_config*.yaml`).
+- Datasets can be downloaded from HuggingFace (see above) or placed manually under `data/`.
+- Config files under `configs/*/data_config*.yaml` accept either a local path or a HuggingFace repo ID for `preprocessed_data`.
 - Preprocessing helpers are in `scripts/preprocess/` and `data_provider/preprocess/`.
 
 ### Pretraining (Stage 1)
