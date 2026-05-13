@@ -32,53 +32,57 @@ git clone https://github.com/dptech-corp/Uni-Core.git
 pip install --no-deps --no-build-isolation ./Uni-Core/
 ```
 
-- Initialize environment variables (edit paths first):
+- Initialize environment variables (copy and edit paths first):
 ```bash
-# copy and edit
-cp init_env.sh init_env.local.sh
-# In init_env.local.sh set HF_HOME, BASE_DIR, DATA_DIR, CUDA_VISIBLE_DEVICES
-source init_env.local.sh
+cp env.sh local.env.sh
+# Edit local.env.sh: set HF_HOME, BASE_DIR, DATA_DIR, DATA_CACHE_DIR, CHECKPOINT_DIR
+source local.env.sh
 ```
 
 ### Data
-- Place datasets under `data/` (see `data/`, `configs/*/data_config.yaml`).
-- Preprocessing helpers are in `scripts/preprocess/`.
+- Place datasets under `data/` (see `configs/*/data_config*.yaml`).
+- Preprocessing helpers are in `scripts/preprocess/` and `data_provider/preprocess/`.
 
 ### Pretraining (Stage 1)
-The main entrypoint is `stage1.py`.
+The main entrypoint is `runner/pretrain.py`, launched via DeepSpeed.
 ```bash
-python stage1.py \
-  --train_config_path configs/stage1/train_config.yaml \
-  --data_config_path  configs/stage1/data_config.yaml
+deepspeed --include localhost:0 \
+    runner/pretrain.py -- \
+    --model_config_path    configs/stage1_dqw2d/model_config.yaml \
+    --training_config_path configs/stage1_dqw2d/training_config.yaml \
+    --data_config_path     configs/stage1_dqw2d/data_config_preprocessed.yaml
 ```
-Notes:
-- Checkpoints are saved to `checkpoints/<filename>/` as defined in the train config.
-- Use `--test_mode` for a quick smoke test.
+Or use the provided helper script (edit `local.env.sh` first):
+```bash
+bash scripts/training/pretraining.sh
+```
 
 ### Finetuning / Instruction Tuning (Stage 2)
-The main entrypoint is `stage2.py`.
+The main entrypoint is `runner/finetuning.py`.
 ```bash
-python stage2.py \
-  --train_config_path configs/stage2/train_config.yaml \
-  --data_config_path  configs/stage2/data_config.yaml
+deepspeed --include localhost:0 \
+    runner/finetuning.py \
+    --model_config_path    configs/stage2_dqw2d/model_config.yaml \
+    --training_config_path configs/stage2_dqw2d/training_config.yaml \
+    --data_config_path     configs/stage2_dqw2d/data_config_preprocessed.yaml
 ```
-Common options:
-- `--test_mode`: small subset run
-- `--resume_from last` or a path: resume training
+Or:
+```bash
+bash scripts/training/finetuning.sh
+```
+Set the pretrained checkpoint path in `model_config.yaml` (`model_name_or_path`).
 
-Ensure the pretrained checkpoint path is set in the model config (e.g., `model_config.model_name_or_path`).
-
-### Downstream Example: MoleculeQA
-Train/evaluate MoleculeQA with the main script in `evaluation/moleculeqa.py`:
+### Downstream Tasks (MoleculeQA / Mol-Instructions)
+QA training uses `runner/qa_finetuning.py`. Example for MoleculeQA:
 ```bash
-python evaluation/moleculeqa.py \
-  --train_config_path configs/moleculeqa/train_config.yaml \
-  --data_config_path  configs/moleculeqa/data_config.yaml
+deepspeed --include localhost:0,1 \
+    runner/qa_finetuning.py \
+    --model_config_path    configs/qa/mol_qa/model_config.yaml \
+    --training_config_path configs/qa/mol_qa/training_config.yaml \
+    --data_config_path     configs/qa/mol_qa/data_config_preprocessed.yaml \
+    --deepspeed_stage 2
 ```
-Or use the provided helper script (edit `BASE_DIR`/`DATA_DIR` first):
-```bash
-bash scripts/MoleculeQA/dqw2d.sh
-```
+Helper scripts for all downstream tasks are in `scripts/qa/`.
 
 
 ### License
